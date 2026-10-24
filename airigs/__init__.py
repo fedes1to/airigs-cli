@@ -11,4 +11,4 @@ under :mod:`airigs.bench` and degrades to ``null`` plus a note when a sensor or
 optional dependency is unavailable -- it never invents a number.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

@@ -50,6 +50,17 @@ optional library yields `null` plus a note, never a made-up number. Each stage
 prints its name and elapsed time to stderr (system scan, idle power, CPU,
 GPUs, interconnect, load phase, payload), so a long run never looks stuck and
 stdout stays clean. The human summary prints the caveats as `note:` lines.
+
+On Linux the run asks once, interactively:
+
+```text
+Would you like to include RAM type and speed? (Requires root) [Y/n]:
+```
+
+Answering yes runs `sudo` (or `doas`, whichever is installed) for
+`dmidecode -t memory`; the privilege tool prompts for the password itself and
+the CLI never handles it. Answering no leaves the fields `null` with a note.
+Non-interactive runs (no TTY) never prompt and use cached credentials only.
 `--json` prints the Benchmark v1 payload.
 
 ## Submit a rig

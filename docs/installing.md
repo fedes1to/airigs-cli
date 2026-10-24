@@ -255,9 +255,14 @@ client with device flow enabled, or set `AIRIGS_CLIENT_ID` to the id they regist
 **`airigs doctor` says config mode is wrong.** `chmod 600 "$XDG_CONFIG_HOME/airigs/config.json"`
 and `chmod 700 "$XDG_CONFIG_HOME/airigs"`.
 
+**RAM type/speed are `null`.** On Linux the interactive bench offers to read them with root:
+`Would you like to include RAM type and speed? (Requires root) [Y/n]:`. Yes uses `sudo` or
+`doas` (whichever is installed) to run `dmidecode -t memory`; the privilege tool asks for the
+password, the CLI never sees it. Non-interactive runs only use cached credentials.
+
 **GPU fields are `null`.** Install `airigs[gpu]`, confirm `nvidia-smi` works, and re-run
-`airigs bench`. Power additionally needs readable RAPL/battery/hwmon; dmidecode needs root.
-Every missing value produces a note naming the requirement.
+`airigs bench`. Power additionally needs readable RAPL/battery/hwmon. Every missing value
+produces a note naming the requirement.
 
 **`rig submit` refuses the payload.** It prints the missing server-required fields. Run
 `airigs bench --output bench.json` and inspect; do not hand-edit numbers into the payload.

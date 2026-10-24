@@ -173,6 +173,108 @@ Memory Device
     assert parsed == {"type": "DDR5", "speedMhz": 6000, "channels": 2}
 
 
+def test_ram_details_prompt_defaults_to_yes(monkeypatch, capsys):
+    monkeypatch.setattr("builtins.input", lambda: "")
+    assert memory._confirm_ram_details() is True
+    assert memory.RAM_DETAILS_PROMPT in capsys.readouterr().err
+    assert memory.RAM_DETAILS_PROMPT == "Would you like to include RAM type and speed? (Requires root) [Y/n]: "
+
+
+def test_ram_specs_asks_for_root_and_retries_with_sudo(monkeypatch):
+    monkeypatch.setattr(memory, "sys_platform", lambda: "linux")
+    monkeypatch.setattr(memory.shutil, "which", lambda name: f"/usr/bin/{name}")
+    sample = """
+Memory Device
+        Size: 32 GB
+        Type: DDR5
+        Configured Memory Speed: 6000 MT/s
+        Bank Locator: P0 CHANNEL A
+"""
+    calls: list[list[str]] = []
+
+    def fake_dmidecode(command):
+        calls.append(command)
+        # The unprivileged read and the cached-credential read fail; after `sudo -v`
+        # the same sudo command succeeds.
+        return sample if len(calls) >= 3 else None
+
+    monkeypatch.setattr(memory, "_dmidecode_text", fake_dmidecode)
+    monkeypatch.setattr(memory, "_can_prompt", lambda: True)
+    monkeypatch.setattr(memory, "_confirm_ram_details", lambda: True)
+    monkeypatch.setattr(memory, "_authenticate", lambda tool: tool == "sudo")
+
+    notes = Notes()
+    specs = memory.memory_specs(notes)
+    assert specs["type"] == "DDR5"
+    assert specs["speedMhz"] == 6000
+    assert calls == [
+        ["dmidecode", "-t", "memory"],
+        ["sudo", "-n", "dmidecode", "-t", "memory"],
+        ["sudo", "-n", "dmidecode", "-t", "memory"],
+    ]
+    assert not any("RAM type/speed" in note for note in notes)
+
+
+def test_ram_specs_uses_doas_when_sudo_is_absent(monkeypatch):
+    monkeypatch.setattr(memory, "sys_platform", lambda: "linux")
+    monkeypatch.setattr(
+        memory.shutil,
+        "which",
+        lambda name: f"/usr/bin/{name}" if name in ("dmidecode", "doas") else None,
+    )
+    sample = """
+Memory Device
+        Size: 16 GB
+        Type: DDR4
+        Speed: 3200 MT/s
+"""
+    calls: list[list[str]] = []
+
+    def fake_dmidecode(command):
+        calls.append(command)
+        return sample if command[0] == "doas" and "-n" not in command else None
+
+    monkeypatch.setattr(memory, "_dmidecode_text", fake_dmidecode)
+    monkeypatch.setattr(memory, "_can_prompt", lambda: True)
+    monkeypatch.setattr(memory, "_confirm_ram_details", lambda: True)
+
+    specs = memory.memory_specs(Notes())
+    assert specs["type"] == "DDR4"
+    assert specs["speedMhz"] == 3200
+    assert calls == [
+        ["dmidecode", "-t", "memory"],
+        ["doas", "-n", "dmidecode", "-t", "memory"],
+        ["doas", "dmidecode", "-t", "memory"],
+    ]
+
+
+def test_ram_specs_records_a_declined_prompt(monkeypatch):
+    monkeypatch.setattr(memory, "sys_platform", lambda: "linux")
+    monkeypatch.setattr(memory.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(memory, "_dmidecode_text", lambda command: None)
+    monkeypatch.setattr(memory, "_can_prompt", lambda: True)
+    monkeypatch.setattr(memory, "_confirm_ram_details", lambda: False)
+    authenticated = []
+    monkeypatch.setattr(memory, "_authenticate", lambda tool: authenticated.append(tool) or True)
+
+    notes = Notes()
+    specs = memory.memory_specs(notes)
+    assert specs["type"] is None
+    assert "RAM type/speed omitted at your request." in notes
+    assert authenticated == []
+
+
+def test_ram_specs_does_not_prompt_without_a_terminal(monkeypatch):
+    monkeypatch.setattr(memory, "sys_platform", lambda: "linux")
+    monkeypatch.setattr(memory.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(memory, "_dmidecode_text", lambda command: None)
+    monkeypatch.setattr(memory, "_can_prompt", lambda: False)
+
+    notes = Notes()
+    memory.memory_specs(notes)
+    assert any("dmidecode needs root" in note for note in notes)
+
+
 def test_proc_cpuinfo_parsing_tmp_path():
     sample = """processor\t: 0
 vendor_id\t: GenuineIntel
