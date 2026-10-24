@@ -18,15 +18,15 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
 ]
 dependencies = [
-  "numpy>=1.24",
-  "psutil>=5.9",
-  "pynvml>=11.5",
+  "numpy>=1.26,<3",
+  "psutil>=5.9,<8",
+  "pynvml>=11,<14",
 ]
 
 [project.optional-dependencies]
 # torch buys TFLOPS, GPU memory bandwidth, P2P bandwidth and MPS measurements.
 # Without it those fields are null and the harness says so.
-gpu = ["torch>=2.1"]
+gpu = ["torch>=2.1,<3"]
 dev = ["pytest>=7.4"]
 
 [project.scripts]

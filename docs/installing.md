@@ -50,6 +50,10 @@ pip install -e '.[gpu,dev]'      # optional measurements + pytest
 
 `make install` runs `pip install -e .`; `make test` runs the offline suite.
 
+The version ranges in `pyproject.toml` are the tested ranges, not a lockfile: pip resolves the
+newest release inside each range. Reinstall in a fresh virtualenv if you need to reproduce a
+release exactly, and keep the ranges in step with what CI tests.
+
 ## Optional `[gpu]` extra
 
 The base install pulls the three required dependencies:
@@ -60,7 +64,7 @@ The base install pulls the three required dependencies:
 | `psutil` | RAM size, system identity |
 | `pynvml` | NVIDIA VRAM, power, PCIe link — imported but only *used* when a driver/device is present |
 
-`pip install 'airigs[gpu]'` (or `pipx install '.[gpu]'`) adds `torch>=2.1`, which enables:
+`pip install 'airigs[gpu]'` (or `pipx install '.[gpu]'`) adds `torch>=2.1,<3`, which enables:
 
 - **TFLOPS** for fp64, fp32, tf32, bf16, fp16, fp8 (where the hardware/torch supports it) and
   int8;

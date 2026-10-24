@@ -9,3 +9,7 @@ build/
 .coverage
 .mypy_cache/
 .ruff_cache/
+
+# Local tokens/secrets (AIRIGS_TOKEN, RECIPES_TOKEN, env overrides).
+.env
+.env.*
