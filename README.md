@@ -46,8 +46,11 @@ airigs bench --quick          # fewer iterations for a smoke test
 ```
 
 CPU, RAM, GPUs, PCIe, interconnect and power are measured; a missing sensor or
-optional library yields `null` plus a note, never a made-up number. `--json`
-prints the Benchmark v1 payload.
+optional library yields `null` plus a note, never a made-up number. Each stage
+prints its name and elapsed time to stderr (system scan, idle power, CPU,
+GPUs, interconnect, load phase, payload), so a long run never looks stuck and
+stdout stays clean. The human summary prints the caveats as `note:` lines.
+`--json` prints the Benchmark v1 payload.
 
 ## Submit a rig
 
@@ -58,6 +61,18 @@ airigs rig submit --name "workstation"
 This requests a single-use challenge, measures, uploads, and fails unless the
 server returns `verified: true`. Reuse a saved run with `--benchmark bench.json`.
 Also: `rig list`, `rig show <id|name>`, `rig delete <id> --yes`.
+
+## Update
+
+```sh
+pipx upgrade airigs                       # the recommended install
+python -m pip install --upgrade airigs    # plain pip / venv install
+uv tool upgrade airigs                    # uv tool install
+```
+
+The CLI checks PyPI at most once a day and, on an interactive terminal, prints
+a one-line notice with the command that fits this installation. Offline runs
+are silent. Set `AIRIGS_NO_UPDATE_CHECK=1` to disable the check.
 
 ## Work with recipes
 

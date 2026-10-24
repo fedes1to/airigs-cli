@@ -26,12 +26,12 @@ TOP_LEVEL_KEYS = (
 )
 
 REMEDIATION = {
-    "gpus": "no GPU was detected; install the vendor driver and `pynvml` (NVIDIA) or run on a machine with a visible GPU",
-    "gpus.name": "GPU name was not reported; install NVIDIA/AMD drivers or `pip install pynvml`",
-    "gpus.vramBytes": "VRAM size unavailable; install `pynvml` (NVIDIA) or check `rocm-smi` (AMD)",
+    "gpus": "no GPU was detected; install the vendor driver and `nvidia-ml-py` (NVIDIA) or run on a machine with a visible GPU",
+    "gpus.name": "GPU name was not reported; install NVIDIA/AMD drivers or `pip install nvidia-ml-py`",
+    "gpus.vramBytes": "VRAM size unavailable; install `nvidia-ml-py` (NVIDIA) or check `rocm-smi` (AMD)",
     "gpus.memoryBandwidth.measuredGBs": "install PyTorch for your GPU: `pip install 'airigs[gpu]'`",
     "gpus.tflops.fp16": "install PyTorch for your GPU: `pip install 'airigs[gpu]'` (fp16 matmul required)",
-    "gpus.power.loadW": "GPU power sensor unavailable; install `pynvml`/NVML or rocm-smi, or pass `--no-power` to keep the field null only if you accept an unverified rig",
+    "gpus.power.loadW": "GPU power sensor unavailable; install `nvidia-ml-py`/NVML or rocm-smi, or pass `--no-power` to keep the field null only if you accept an unverified rig",
     "gpus.pcie.version": "PCIe link generation unavailable; install `nvidia-smi` (NVIDIA) or check sysfs (AMD)",
     "gpus.pcie.width": "PCIe link width unavailable; install `nvidia-smi` (NVIDIA) or check sysfs (AMD)",
     "cpuBench.memory.readGBs": "RAM bandwidth was not measured; install numpy (it is a hard dependency)",

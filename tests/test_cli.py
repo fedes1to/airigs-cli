@@ -236,7 +236,7 @@ def test_bench_self_check_mode(monkeypatch, isolated_config, capsys):
     monkeypatch.setattr(
         cli.bench_runner,
         "self_check",
-        lambda: {"ok": True, "schemaProblems": [], "missingRequired": [], "benchmark": make_benchmark()},
+        lambda **_kwargs: {"ok": True, "schemaProblems": [], "missingRequired": [], "benchmark": make_benchmark()},
     )
     code = cli.main(["--self-check", "--json"])
     assert code == 0

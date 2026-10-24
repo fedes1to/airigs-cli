@@ -12,7 +12,8 @@ import re
 import shutil
 import subprocess
 import time
-from typing import Any
+import warnings
+from typing import Any, Callable
 from xml.etree import ElementTree
 
 from .common import Notes, gbps, import_optional, measure, median_or_none, tflops as to_tflops
@@ -49,6 +50,20 @@ def nvidia_smi_available() -> bool:
     return shutil.which("nvidia-smi") is not None
 
 
+def import_nvml() -> Any | None:
+    """Import the NVML binding, hiding the deprecation warning of the old shim.
+
+    ``pip install pynvml`` still resolves for users who installed it directly,
+    but that distribution is deprecated in favour of ``nvidia-ml-py`` (which
+    provides the same ``pynvml`` module). Import it quietly: the warning is
+    about packaging, not about anything this harness does, and it otherwise
+    lands in the middle of the benchmark output.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="The pynvml package is deprecated.*", category=FutureWarning)
+        return import_optional("pynvml")
+
+
 # ---------------------------------------------------------------------------
 # NVML
 
@@ -57,7 +72,7 @@ class NvmlSession:
     """A thin NVML handle. ``available`` is False when the library or driver is absent."""
 
     def __init__(self) -> None:
-        self.lib = import_optional("pynvml")
+        self.lib = import_nvml()
         self.available = False
         self.count = 0
         if self.lib is None:
@@ -585,19 +600,28 @@ def torch_available(torch: Any | None) -> bool:
     return torch is not None and bool(getattr(torch, "cuda", None)) and torch.cuda.is_available()
 
 
-def run_torch_measurements(gpus: list[dict[str, Any]], *, quick: bool = False, notes: Notes | None = None) -> None:
+def run_torch_measurements(
+    gpus: list[dict[str, Any]],
+    *,
+    quick: bool = False,
+    notes: Notes | None = None,
+    progress: Callable[[str], None] | None = None,
+) -> None:
     """Apply torch measurements to CUDA GPUs. No torch -> note, no numbers."""
     notes = notes if notes is not None else Notes()
+    notify = progress or (lambda _message: None)
     if not gpus:
         return
     torch = import_optional("torch")
     if torch is None:
+        notify("torch is not installed: GPU memory bandwidth and TFLOPS stay n/a")
         notes.add(
             "torch is not installed: TFLOPS, GPU memory bandwidth and P2P bandwidth were not measured "
             "(install with `pip install 'airigs[gpu]'`)."
         )
         return
     if not torch_available(torch):
+        notify("torch is installed but CUDA is unavailable: GPU compute measurements skipped")
         notes.add("torch is installed but CUDA is not available: GPU compute measurements were not taken.")
         return
     try:
@@ -611,4 +635,5 @@ def run_torch_measurements(gpus: list[dict[str, Any]], *, quick: bool = False, n
         if index >= device_count:
             notes.add(f"GPU {index}: not visible to torch; compute measurements skipped.")
             continue
+        notify(f"GPU {index}: measuring memory bandwidth and TFLOPS (torch)")
         measure_torch_gpu(torch, index, gpu, quick=quick, notes=notes)

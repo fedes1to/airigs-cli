@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
   "numpy>=1.26,<3",
   "psutil>=5.9,<8",
-  "pynvml>=11,<14",
+  "nvidia-ml-py>=12,<14",
 ]
 
 [project.optional-dependencies]

@@ -44,6 +44,20 @@ pipx uninstall airigs
 Uninstalling does **not** delete your token store (it lives in your XDG config directory). See
 "Where the config lives" below and run `airigs logout` first if you want the session revoked.
 
+## Updating
+
+```sh
+pipx upgrade airigs                       # pipx (recommended)
+python -m pip install --upgrade airigs    # pip in a virtualenv
+uv tool upgrade airigs                    # uv tool install
+```
+
+After a command finishes, the CLI checks PyPI for a newer release at most once a day and, when
+stderr is a terminal, prints the version and the upgrade command for the installation it detects.
+The check is best-effort: offline runs and non-interactive output stay silent, and it never
+changes the command's exit status. `AIRIGS_NO_UPDATE_CHECK=1` disables it (the cache lives in
+`$XDG_CONFIG_HOME/airigs/update-check.json`).
+
 ## Development install
 
 ```sh
@@ -68,7 +82,7 @@ The base install pulls the three required dependencies:
 |---|---|
 | `numpy` | CPU matmul benchmarks, RAM bandwidth calculations |
 | `psutil` | RAM size, system identity |
-| `pynvml` | NVIDIA VRAM, power, PCIe link — imported but only *used* when a driver/device is present |
+| `nvidia-ml-py` | NVIDIA VRAM, power, PCIe link (it provides the `pynvml` module) — imported but only *used* when a driver/device is present |
 
 `pip install 'airigs[gpu]'` (or `pipx install '.[gpu]'`) adds `torch>=2.1,<3`, which enables:
 

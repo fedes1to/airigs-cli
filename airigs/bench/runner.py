@@ -8,7 +8,7 @@ import statistics
 import sys
 import threading
 import time
-from typing import Any
+from typing import Any, Callable
 
 from .. import __version__
 from ..http import AirigsError
@@ -19,6 +19,14 @@ DEFAULT_LOAD_SECONDS = 10.0
 QUICK_LOAD_SECONDS = 3.0
 IDLE_SECONDS = 2.0
 QUICK_IDLE_SECONDS = 0.6
+
+Progress = Callable[[str], None]
+
+
+def _notify(progress: Progress | None, message: str) -> None:
+    """Report a benchmark stage without making the harness depend on a printer."""
+    if progress is not None:
+        progress(message)
 
 
 def runner_info() -> dict[str, Any]:
@@ -51,7 +59,7 @@ def collect_system(*, notes: Notes) -> dict[str, Any]:
 
 
 def collect_gpus(
-    *, quick: bool, notes: Notes
+    *, quick: bool, notes: Notes, progress: Progress | None = None
 ) -> tuple[list[dict[str, Any]], nvidia.NvmlSession, str | None]:
     """Detect GPUs and run the matching torch measurements.
 
@@ -61,15 +69,22 @@ def collect_gpus(
     session = nvidia.NvmlSession()
     gpus = nvidia.enumerate_gpus(notes=notes, session=session)
     if gpus:
-        nvidia.run_torch_measurements(gpus, quick=quick, notes=notes)
+        names = ", ".join(f"{gpu.get('name') or 'unknown'} (GPU {gpu.get('index')})" for gpu in gpus)
+        _notify(progress, f"found {len(gpus)} NVIDIA GPU(s): {names}")
+        nvidia.run_torch_measurements(gpus, quick=quick, notes=notes, progress=progress)
         return gpus, session, "nvidia"
 
     session.close()
+    _notify(progress, "no NVIDIA GPU; trying AMD (sysfs / rocm-smi)")
     gpus = amd.run(quick=quick, notes=notes)
     if gpus:
+        _notify(progress, f"found {len(gpus)} AMD GPU(s)")
         return gpus, session, "amd"
 
+    _notify(progress, "no AMD GPU; trying Apple Metal")
     gpus = apple.run(quick=quick, notes=notes)
+    if gpus:
+        _notify(progress, f"found {len(gpus)} Apple GPU(s)")
     return gpus, session, "apple" if gpus else None
 
 
@@ -312,29 +327,40 @@ def run_benchmark(
     gpu: Any = "all",
     no_power: bool = False,
     hold_load: float | None = None,
+    progress: Progress | None = None,
 ) -> dict[str, Any]:
-    """Run the hardware benchmark and return the Benchmark v1 payload."""
+    """Run the hardware benchmark and return the Benchmark v1 payload.
+
+    ``progress`` receives one human-readable line per stage; it is optional so
+    the harness stays quiet when embedded in another command or a test.
+    """
     notes = Notes()
     started_real = utc_now()
     started_at = now_iso()
     t0 = time.monotonic()
 
+    _notify(progress, "collecting system identity (CPU, RAM, drivers)")
     system = collect_system(notes=notes)
 
     idle_duration = QUICK_IDLE_SECONDS if quick else IDLE_SECONDS
     if no_power:
+        _notify(progress, "skipping power measurement (--no-power)")
         idle = {"idleW": None, "loadW": None, "measurement": "none", "psuWatts": None}
         notes.add("Power measurement skipped (--no-power); idleW/loadW/psuWatts are null.")
     else:
+        _notify(progress, f"sampling idle system power for {idle_duration:g} s")
         idle = power.idle_power(idle_duration, notes=notes)
 
+    _notify(progress, "benchmarking CPU (SHA-256, numpy matmul) and RAM bandwidth")
     cpu_bench = cpu.run(quick=quick, notes=notes)
     cpu_bench["memory"] = memory.run(quick=quick, notes=notes)
 
-    gpus, session, vendor = collect_gpus(quick=quick, notes=notes)
+    _notify(progress, "detecting GPUs")
+    gpus, session, vendor = collect_gpus(quick=quick, notes=notes, progress=progress)
     under_load: dict[str, Any]
     system_load = None
     try:
+        _notify(progress, "probing peer access and NVLink topology")
         interconnect = p2p.run(quick=quick, notes=notes)
         gpus = _select_gpus(gpus, gpu)
         if no_power:
@@ -344,10 +370,16 @@ def run_benchmark(
             if vendor == "nvidia" and not session.available:
                 notes.add("GPU idle/load power not sampled: NVML is unavailable.")
             else:
-                _gpu_idle_power(session, gpus, vendor, 0.5 if quick else 1.0)
+                gpu_idle_duration = 0.5 if quick else 1.0
+                _notify(progress, f"sampling GPU idle power for {gpu_idle_duration:g} s")
+                _gpu_idle_power(session, gpus, vendor, gpu_idle_duration)
 
         load_duration = hold_load if hold_load is not None else (QUICK_LOAD_SECONDS if quick else DEFAULT_LOAD_SECONDS)
         load_duration = max(0.5, float(load_duration))
+        _notify(
+            progress,
+            f"applying full CPU+GPU load for {load_duration:g} s while sampling utilization, temperature and power",
+        )
         under_load, system_load = _run_load_phase(
             gpus=gpus,
             session=session,
@@ -361,6 +393,7 @@ def run_benchmark(
     if vendor == "nvidia" and gpus:
         # Clocks read at enumeration are idle clocks; refresh after the load phase.
         nvidia.refresh_clocks(gpus)
+    _notify(progress, "assembling the Benchmark v1 payload")
 
     power_block = dict(idle)
     if no_power:
@@ -388,9 +421,9 @@ def run_benchmark(
     )
 
 
-def self_check() -> dict[str, Any]:
+def self_check(progress: Progress | None = None) -> dict[str, Any]:
     """Run a quick benchmark and validate the payload against the local schema."""
-    bench = run_benchmark(quick=True)
+    bench = run_benchmark(quick=True, progress=progress)
     problems = report.check_shape(bench)
     missing = report.missing_required(bench)
     return {

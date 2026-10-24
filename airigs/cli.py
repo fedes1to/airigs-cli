@@ -11,10 +11,11 @@ import json
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
-from . import __version__, auth, config, http, recipebench, recipes
+from . import __version__, auth, config, http, recipebench, recipes, update
 from .bench import report as bench_report
 from .bench import runner as bench_runner
 from .bench.common import Notes, now_iso
@@ -423,12 +424,19 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         except Exception:
             check(module, "fail", "not importable", remediation)
 
-    try:
-        import pynvml
+    from .bench import amd as bench_amd
+    from .bench import nvidia as bench_nvidia
 
-        check("pynvml", "ok", getattr(pynvml, "__version__", "installed"))
-    except Exception:
-        check("pynvml", "warn", "not installed", "pip install pynvml (needed for NVIDIA power/VRAM)")
+    nvml = bench_nvidia.import_nvml()
+    if nvml is not None:
+        check("pynvml", "ok", getattr(nvml, "__version__", "installed"))
+    else:
+        check(
+            "pynvml",
+            "warn",
+            "not installed (`nvidia-ml-py` provides the `pynvml` module)",
+            "pip install nvidia-ml-py (needed for NVIDIA power/VRAM)",
+        )
 
     try:
         import torch
@@ -459,9 +467,6 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             "not installed",
             "install `airigs[gpu]` for TFLOPS / GPU bandwidth / P2P measurements",
         )
-
-    from .bench import amd as bench_amd
-    from .bench import nvidia as bench_nvidia
 
     check(
         "nvidia-smi",
@@ -558,12 +563,28 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 # bench
 
 
+def _bench_progress(args: argparse.Namespace) -> Callable[[str], None]:
+    """Stream benchmark stages to stderr, keeping stdout valid for --json."""
+    started = time.monotonic()
+
+    def report(message: str) -> None:
+        print(f"bench {time.monotonic() - started:5.1f}s  {message}", file=sys.stderr, flush=True)
+
+    return report
+
+
+def _print_notes(bench: dict[str, Any]) -> None:
+    for note in bench.get("notes") or []:
+        print(f"  note: {note}", file=sys.stderr)
+
+
 def cmd_bench(args: argparse.Namespace) -> int:
     bench = bench_runner.run_benchmark(
         quick=args.quick,
         gpu=args.gpu,
         no_power=args.no_power,
         hold_load=args.hold_load,
+        progress=_bench_progress(args),
     )
     written = None
     if args.output:
@@ -573,6 +594,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
         print(json.dumps(bench, indent=2))
     else:
         print(render_table(("field", "value"), bench_report.summary(bench)))
+        _print_notes(bench)
         if missing:
             print("\nThe server requires measurements that are missing:", file=sys.stderr)
             for item in missing:
@@ -586,7 +608,7 @@ def cmd_bench(args: argparse.Namespace) -> int:
 
 
 def cmd_self_check(args: argparse.Namespace) -> int:
-    result = bench_runner.self_check()
+    result = bench_runner.self_check(progress=_bench_progress(args))
     bench = result.pop("benchmark")
     if args.json:
         print(json.dumps({**result, "benchmark": bench}, indent=2))
@@ -605,6 +627,7 @@ def cmd_self_check(args: argparse.Namespace) -> int:
                 ],
             )
         )
+        _print_notes(bench)
         for problem in result["schemaProblems"]:
             print(f"  schema: {problem}", file=sys.stderr)
         for item in result["missingRequired"]:
@@ -778,13 +801,20 @@ def _run_and_upload_benchmark(
     gpu: Any = "all",
     no_power: bool = False,
     hold_load: float | None = None,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     client = ctx.airigs()
     last_error: HttpError | None = None
     for attempt in (1, 2):
         # The server issues a single-use challenge that must precede measurement.
+        if progress is not None:
+            progress("requesting a fresh benchmark challenge from the server")
         challenge = _request_challenge(client, rig_id)
-        bench = bench_runner.run_benchmark(quick=quick, gpu=gpu, no_power=no_power, hold_load=hold_load)
+        if progress is not None and attempt > 1:
+            progress("the challenge expired or was replayed; measuring again")
+        bench = bench_runner.run_benchmark(
+            quick=quick, gpu=gpu, no_power=no_power, hold_load=hold_load, progress=progress
+        )
         bench["challenge"] = challenge
         bench_report.require_complete(bench)
         if output:
@@ -821,6 +851,7 @@ def cmd_rig_benchmark(args: argparse.Namespace) -> int:
         gpu=args.gpu,
         no_power=args.no_power,
         hold_load=args.hold_load,
+        progress=_bench_progress(args),
     )
     emit(
         args,
@@ -877,6 +908,7 @@ def cmd_rig_submit(args: argparse.Namespace) -> int:
             gpu=args.gpu,
             no_power=args.no_power,
             hold_load=args.hold_load,
+            progress=_bench_progress(args),
         )
     emit(
         args,
@@ -1309,26 +1341,29 @@ def main(argv: Sequence[str] | None = None) -> int:
     raw, extra = split_passthrough(raw)
     args = parser.parse_args(hoist_global_flags(raw))
     args.extra = extra
-    if getattr(args, "self_check", False):
-        args.command = "self-check"
-        args.output = None
-        return cmd_self_check(args)
-    if not getattr(args, "command", None):
-        parser.print_help()
-        return 2
     try:
-        return int(args.func(args))
+        if getattr(args, "self_check", False):
+            args.command = "self-check"
+            args.output = None
+            status = cmd_self_check(args)
+        elif not getattr(args, "command", None):
+            parser.print_help()
+            return 2
+        else:
+            status = int(args.func(args))
     except (ConfigError, AirigsError, RecipeError, bench_report.IncompleteBenchmark,
             recipebench.RecipeBenchmarkIncomplete, ScriptError) as exc:
-        status = getattr(exc, "status", None)
+        problem = getattr(exc, "status", None)
         if getattr(args, "json", False):
-            print(json.dumps({"error": str(exc), "status": status}, indent=2), file=sys.stderr)
+            print(json.dumps({"error": str(exc), "status": problem}, indent=2), file=sys.stderr)
         else:
             print(f"error: {exc}", file=sys.stderr)
-        return getattr(exc, "exit_code", 1)
+        status = getattr(exc, "exit_code", 1)
     except KeyboardInterrupt:
         print("interrupted", file=sys.stderr)
         return 130
+    update.maybe_notify()
+    return status
 
 
 if __name__ == "__main__":  # pragma: no cover

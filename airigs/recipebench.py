@@ -591,7 +591,7 @@ def run(
     if not samples["nvml"]:
         notes.add(
             "VRAM peak and GPU power were not measured: NVML is unavailable on this host "
-            "(install the NVIDIA driver + `pynvml`, or run on the inference host)."
+            "(install the NVIDIA driver + `nvidia-ml-py`, or run on the inference host)."
         )
     if samples["ramPeakBytes"] is None:
         notes.add("system RAM peak not measured: psutil is unavailable.")
@@ -634,7 +634,7 @@ RECIPE_REQUIRED = (
     ("concurrency", "internal error: concurrency missing"),
     ("ttftMs", "no request produced a first token; check the endpoint"),
     ("outputTokensPerSec", "no output tokens were produced"),
-    ("vramPeakBytes", "run on the inference host with NVML available (`pip install pynvml`, NVIDIA driver)"),
+    ("vramPeakBytes", "run on the inference host with NVML available (`pip install nvidia-ml-py`, NVIDIA driver)"),
     ("powerAvgW", "run on the inference host with a GPU power sensor (NVML / rocm-smi)"),
 )
 
