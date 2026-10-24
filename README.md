@@ -76,14 +76,21 @@ Also: `rig list`, `rig show <id|name>`, `rig delete <id> --yes`.
 ## Update
 
 ```sh
-pipx upgrade airigs                       # the recommended install
-python -m pip install --upgrade airigs    # plain pip / venv install
-uv tool upgrade airigs                    # uv tool install
+# pipx installed from the repository (the recommended install)
+pipx install --force 'git+https://git.fedesito.me/fedes1to/airigs-cli.git'
+
+# pipx installed from a local checkout
+git pull && pipx install --force .
+
+# pip / uv tool
+python -m pip install --upgrade 'git+https://git.fedesito.me/fedes1to/airigs-cli.git'
+uv tool upgrade airigs
 ```
 
-The CLI checks PyPI at most once a day and, on an interactive terminal, prints
-a one-line notice with the command that fits this installation. Offline runs
-are silent. Set `AIRIGS_NO_UPDATE_CHECK=1` to disable the check.
+The CLI checks the repository's `pyproject.toml` at most once a day and, on an
+interactive terminal, prints a one-line notice with the command that matches
+this installation. Offline runs are silent. Set `AIRIGS_NO_UPDATE_CHECK=1` to
+disable the check.
 
 ## Work with recipes
 

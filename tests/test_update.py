@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 
 from airigs import update
 
@@ -20,6 +21,31 @@ def test_version_comparison_handles_padding_and_metadata():
     assert not update.is_newer("0.1.0", "0.1.0")
     assert not update.is_newer("0.0.9", "0.1.0")
     assert not update.is_newer("not-a-version", "0.1.0")
+
+
+def test_fetch_latest_reads_the_repository_pyproject(monkeypatch):
+    class Response:
+        ok = True
+        text = '[project]\nname = "airigs"\nversion = "1.2.3"\n'
+
+    monkeypatch.setattr(update.http, "send", lambda *args, **kwargs: Response())
+    assert update._fetch_latest() == "1.2.3"
+
+
+def test_upgrade_command_uses_the_source_pipx_recorded(tmp_path, monkeypatch):
+    venv = tmp_path / "pipx" / "venvs" / "airigs"
+    (venv / "bin").mkdir(parents=True)
+    (venv / "pipx_metadata.json").write_text(
+        json.dumps({"main_package": {"package_or_url": update.REPO_SOURCE}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(update.sys, "executable", str(venv / "bin" / "python"))
+    assert update.upgrade_command() == f"pipx install --force '{update.REPO_SOURCE}'"
+
+
+def test_upgrade_command_falls_back_to_the_repository(tmp_path, monkeypatch):
+    monkeypatch.setattr(update.sys, "executable", str(tmp_path / "python"))
+    assert update.upgrade_command() == f"python -m pip install --upgrade '{update.REPO_SOURCE}'"
 
 
 def test_latest_known_caches_the_answer_for_a_day(isolated_config, monkeypatch):

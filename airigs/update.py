@@ -1,4 +1,4 @@
-"""Update notices: check PyPI once a day and say how to upgrade.
+"""Update notices: check the public repository once a day and say how to upgrade.
 
 The check is deliberately boring: it runs after a command has done its work,
 only for interactive terminals, at most once per day, with a short timeout, and
@@ -19,7 +19,8 @@ from typing import Any, TextIO
 
 from . import __version__, config, http
 
-PYPI_URL = "https://pypi.org/pypi/airigs/json"
+VERSION_URL = "https://git.fedesito.me/fedes1to/airigs-cli/raw/branch/main/pyproject.toml"
+REPO_SOURCE = "git+https://git.fedesito.me/fedes1to/airigs-cli.git"
 CACHE_NAME = "update-check.json"
 CHECK_INTERVAL_S = 24 * 60 * 60
 REQUEST_TIMEOUT_S = 2.0
@@ -48,12 +49,11 @@ def is_newer(latest: str, current: str = __version__) -> bool:
 
 
 def _fetch_latest() -> str | None:
-    response = http.send("GET", PYPI_URL, timeout=REQUEST_TIMEOUT_S)
-    if not response.ok or not isinstance(response.data, dict):
+    response = http.send("GET", VERSION_URL, timeout=REQUEST_TIMEOUT_S, accept="text/plain")
+    if not response.ok:
         return None
-    info = response.data.get("info")
-    version = info.get("version") if isinstance(info, dict) else None
-    return version if isinstance(version, str) and version else None
+    match = re.search(r'^version\s*=\s*"([^"]+)"', response.text, re.MULTILINE)
+    return match.group(1) if match else None
 
 
 def _read_cache() -> dict[str, Any]:
@@ -110,14 +110,31 @@ def latest_known(*, now: float | None = None, force: bool = False) -> str | None
     return latest
 
 
+def _pipx_source() -> str | None:
+    """The ``package_or_url`` pipx recorded for this venv, when there is one."""
+    metadata = Path(sys.executable).parent.parent / "pipx_metadata.json"
+    try:
+        data = json.loads(metadata.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    main = data.get("main_package") if isinstance(data, dict) else None
+    source = main.get("package_or_url") if isinstance(main, dict) else None
+    return source if isinstance(source, str) and source else None
+
+
 def upgrade_command() -> str:
-    """Best guess at how this installation can upgrade itself."""
+    """The command that matches how this installation actually got here."""
     executable = sys.executable.replace("\\", "/").lower()
     if "pipx" in executable:
+        source = _pipx_source()
+        # pipx from a local checkout or git URL needs --force; an index install
+        # is what `pipx upgrade` is for.
+        if source and ("://" in source or source.startswith(("/", ".", "~"))):
+            return f"pipx install --force '{source}'"
         return "pipx upgrade airigs"
     if "/uv/" in executable or "uv-tools" in executable:
         return "uv tool upgrade airigs"
-    return "python -m pip install --upgrade airigs"
+    return f"python -m pip install --upgrade '{REPO_SOURCE}'"
 
 
 def maybe_notify(stream: TextIO | None = None, *, now: float | None = None) -> bool:

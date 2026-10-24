@@ -46,16 +46,25 @@ Uninstalling does **not** delete your token store (it lives in your XDG config d
 
 ## Updating
 
+The package is distributed from this repository, not from an index:
+
 ```sh
-pipx upgrade airigs                       # pipx (recommended)
-python -m pip install --upgrade airigs    # pip in a virtualenv
-uv tool upgrade airigs                    # uv tool install
+# pipx from git (recommended)
+pipx install --force 'git+https://git.fedesito.me/fedes1to/airigs-cli.git'
+
+# pipx from a local checkout
+git pull && pipx install --force .
+
+# pip in a virtualenv, or uv
+python -m pip install --upgrade 'git+https://git.fedesito.me/fedes1to/airigs-cli.git'
+uv tool upgrade airigs
 ```
 
-After a command finishes, the CLI checks PyPI for a newer release at most once a day and, when
-stderr is a terminal, prints the version and the upgrade command for the installation it detects.
-The check is best-effort: offline runs and non-interactive output stay silent, and it never
-changes the command's exit status. `AIRIGS_NO_UPDATE_CHECK=1` disables it (the cache lives in
+After a command finishes, the CLI reads `pyproject.toml` from the public repository at most once
+a day and, when stderr is a terminal, prints the version and the upgrade command that matches the
+installation it detects (pipx reads its own metadata to rebuild the original source). The check
+is best-effort: offline runs and non-interactive output stay silent, and it never changes the
+command's exit status. `AIRIGS_NO_UPDATE_CHECK=1` disables it (the cache lives in
 `$XDG_CONFIG_HOME/airigs/update-check.json`).
 
 ## Development install
