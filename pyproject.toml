@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "airigs"
+version = "0.1.0"
+description = "Official command-line tool for AIRigs and the Recipes platform"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "AIRigs" }]
+keywords = ["airigs", "benchmark", "llm", "rig", "recipes"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Environment :: Console",
+  "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+  "numpy>=1.24",
+  "psutil>=5.9",
+  "pynvml>=11.5",
+]
+
+[project.optional-dependencies]
+# torch buys TFLOPS, GPU memory bandwidth, P2P bandwidth and MPS measurements.
+# Without it those fields are null and the harness says so.
+gpu = ["torch>=2.1"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+airigs = "airigs.cli:main"
+
+[project.urls]
+Homepage = "https://airigs.example"
+
+[tool.setuptools.packages.find]
+include = ["airigs*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
