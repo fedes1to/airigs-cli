@@ -123,23 +123,24 @@ Check the session at any time with:
 airigs whoami
 ```
 
-## Pointing at a non-local deployment
+## Pointing at a local instance
 
-Defaults are the local development pair:
+An install from the public repository uses the public deployment by default, so
+no environment variables are needed:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `AIRIGS_URL` | `http://localhost:4567` | identity provider, rigs, benchmarks |
-| `RECIPES_URL` | `http://localhost:4568` | Recipes platform |
+| `AIRIGS_URL` | `https://airigs.net` | identity provider, rigs, benchmarks |
+| `RECIPES_URL` | `https://recipes.airigs.net` | Recipes platform |
 | `AIRIGS_TOKEN` | — | bearer token used directly (no refresh chain; for CI) |
 | `RECIPES_TOKEN` | falls back to `AIRIGS_TOKEN` | token sent to Recipes |
 | `AIRIGS_CLIENT_ID` | `airigs-cli` | public client id; only needed if the instance uses a different one |
 
-For a public instance:
+Set both URLs only when you run your own (or a local development) instance:
 
 ```sh
-export AIRIGS_URL=https://airigs.example.com
-export RECIPES_URL=https://recipes.example.com
+export AIRIGS_URL=http://localhost:4567
+export RECIPES_URL=http://localhost:4568
 airigs login
 ```
 
@@ -181,9 +182,9 @@ ok     nvml               1 GPU(s) visible
 skip   rocm               not present
 warn   config file        not created yet                                           -> run `airigs login`
 warn   token              missing (source: none, issuer: unknown, expires in n/as)  -> run `airigs login`
-ok     issuer transport   http://localhost:4567
-ok     AIRigs reachable   http://localhost:4567 (HTTP 200)
-ok     Recipes reachable  http://localhost:4568 (HTTP 200)
+ok     issuer transport   https://airigs.net
+ok     AIRigs reachable   https://airigs.net (HTTP 200)
+ok     Recipes reachable  https://recipes.airigs.net (HTTP 200)
 skip   mongodb            not used by the CLI; the forum owns its own database
 ```
 

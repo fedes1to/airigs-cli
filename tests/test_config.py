@@ -29,6 +29,15 @@ def test_corrupt_config_raises(isolated_config):
         config.load_config()
 
 
+def test_defaults_are_the_public_deployment(isolated_config):
+    """A fresh install with no env or config must target production."""
+    settings = config.resolve_settings()
+    assert settings.airigs_url == "https://airigs.net"
+    assert settings.recipes_url == "https://recipes.airigs.net"
+    assert settings.token_origin is None
+    assert "localhost" not in settings.airigs_url + settings.recipes_url
+
+
 def test_env_overrides_config(isolated_config, monkeypatch):
     config.save_config({"airigs_url": "http://config-airigs", "token": "config-token"})
     monkeypatch.setenv("AIRIGS_URL", "http://env-airigs/")

@@ -33,7 +33,7 @@ dev = ["pytest>=7.4"]
 airigs = "airigs.cli:main"
 
 [project.urls]
-Homepage = "https://airigs.example"
+Homepage = "https://airigs.net"
 
 [tool.setuptools.packages.find]
 include = ["airigs*"]

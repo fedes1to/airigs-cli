@@ -1104,8 +1104,18 @@ def add_common(parser: argparse.ArgumentParser, *, suppress: bool = True) -> Non
     default = argparse.SUPPRESS if suppress else None
     parser.add_argument("--json", action="store_true", default=argparse.SUPPRESS if suppress else False, help="machine-readable JSON output")
     parser.add_argument("--verbose", action="store_true", default=argparse.SUPPRESS if suppress else False, help="log HTTP requests (tokens redacted)")
-    parser.add_argument("--airigs-url", metavar="URL", default=default, help="AIRigs base URL (env AIRIGS_URL)")
-    parser.add_argument("--recipes-url", metavar="URL", default=default, help="Recipes base URL (env RECIPES_URL)")
+    parser.add_argument(
+        "--airigs-url",
+        metavar="URL",
+        default=default,
+        help="AIRigs base URL (env AIRIGS_URL; default https://airigs.net)",
+    )
+    parser.add_argument(
+        "--recipes-url",
+        metavar="URL",
+        default=default,
+        help="Recipes base URL (env RECIPES_URL; default https://recipes.airigs.net)",
+    )
 
 
 def _bench_options(parser: argparse.ArgumentParser) -> None:

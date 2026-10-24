@@ -18,8 +18,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-DEFAULT_AIRIGS_URL = "http://localhost:4567"
-DEFAULT_RECIPES_URL = "http://localhost:4568"
+DEFAULT_AIRIGS_URL = "https://airigs.net"
+DEFAULT_RECIPES_URL = "https://recipes.airigs.net"
 
 #: The OAuth client the CLI authenticates as. AIRigs generates the id when the
 #: administrator registers the client (``aic_...``), so it is deployment-specific

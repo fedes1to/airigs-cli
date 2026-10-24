@@ -26,13 +26,15 @@ use `--no-browser`, or pipe a token on stdin (argv leaks through `ps`):
 printf '%s' "$AIRIGS_TOKEN" | airigs login --token -
 ```
 
-Local defaults are `http://localhost:4567` (AIRigs) and `http://localhost:4568`
-(Recipes). For another deployment, set both and log in again — tokens are bound
-to their issuer origin, so a new host always needs a fresh login:
+An install from this repository talks to the public deployment out of the box:
+`https://airigs.net` (AIRigs) and `https://recipes.airigs.net` (Recipes). No
+environment variables are needed. Only for a local instance set both URLs (env
+or `--airigs-url`/`--recipes-url`) and log in again — tokens are bound to their
+issuer origin, so a new host always needs a fresh login:
 
 ```sh
-export AIRIGS_URL=https://airigs.example.com
-export RECIPES_URL=https://recipes.example.com
+export AIRIGS_URL=http://localhost:4567
+export RECIPES_URL=http://localhost:4568
 airigs login
 ```
 

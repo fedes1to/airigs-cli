@@ -5,8 +5,8 @@ sites and lives outside both of them:
 
 | service | default | role |
 |---|---|---|
-| AIRigs | `http://localhost:4567` (`AIRIGS_URL`) | identity provider (OAuth 2.0 device flow), rigs, hardware benchmarks |
-| Recipes platform | `http://localhost:4568` (`RECIPES_URL`) | recipes, recipe benchmarks, published scripts; introspects the AIRigs token |
+| AIRigs | `https://airigs.net` (`AIRIGS_URL`) | identity provider (OAuth 2.0 device flow), rigs, hardware benchmarks |
+| Recipes platform | `https://recipes.airigs.net` (`RECIPES_URL`) | recipes, recipe benchmarks, published scripts; introspects the AIRigs token |
 
 Nothing in this repo may assume it is a subdirectory of either site. The frozen
 HTTP contract is documented in `docs/benchmark-v1.md` and quoted in
