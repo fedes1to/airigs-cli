@@ -1122,6 +1122,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="airigs",
         description="AIRigs official CLI: authenticate, benchmark hardware, submit rigs and recipes.",
+        epilog=(
+            "common commands:\n"
+            "  airigs login                             authenticate (device flow)\n"
+            "  airigs bench --output bench.json         measure this machine\n"
+            "  airigs rig submit --name NAME            measure and upload a verified rig\n"
+            "  airigs recipe bench SLUG --endpoint URL  benchmark a running endpoint\n"
+            "\n"
+            "`airigs <command> --help` lists that command's flags; every command accepts --json."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_common(parser, suppress=False)
     parser.set_defaults(self_check=False)

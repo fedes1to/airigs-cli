@@ -20,6 +20,12 @@ Run from the repository root (the directory containing `pyproject.toml`):
 pipx install .
 ```
 
+The repository is public, so you can also install straight from it:
+
+```sh
+pipx install 'git+https://git.fedesito.me/fedes1to/airigs-cli.git'
+```
+
 Upgrade an existing pipx install after updating the checkout:
 
 ```sh
@@ -229,8 +235,8 @@ different `AIRIGS_URL`. Log in once against the new origin; reusing a token acro
 refused by design.
 
 **Login fails with `invalid_client`.** The instance has no client with id `airigs-cli`. Ask the
-administrator to register it (see `airigs/docs/upgrading.md`, section 5), or set
-`AIRIGS_CLIENT_ID` to the id they registered.
+administrator to register a public client with device flow enabled, or set `AIRIGS_CLIENT_ID`
+to the id they registered.
 
 **`airigs doctor` says config mode is wrong.** `chmod 600 "$XDG_CONFIG_HOME/airigs/config.json"`
 and `chmod 700 "$XDG_CONFIG_HOME/airigs"`.
@@ -241,16 +247,3 @@ Every missing value produces a note naming the requirement.
 
 **`rig submit` refuses the payload.** It prints the missing server-required fields. Run
 `airigs bench --output bench.json` and inspect; do not hand-edit numbers into the payload.
-
-## Verified here
-
-On 2026-10-24, in a throwaway virtualenv on the development host:
-
-- `python3 -m venv /tmp/airigs-cli-venv && pip install -e .` — succeeded;
-- `airigs --version` — `airigs 0.1.0`;
-- `airigs doctor` — the table above (`exit=0`).
-
-`pipx` was not installed on this host, and no browser login was driven end to end here. The
-`pipx install .`, `airigs login` and revocation behaviour is documented from the packaging and
-code, and from the device-flow self-test in `airigs/bin/sso-selftest.js`, which exercises the
-same server endpoints.
