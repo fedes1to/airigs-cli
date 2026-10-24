@@ -21,9 +21,9 @@ from urllib.parse import urlparse
 DEFAULT_AIRIGS_URL = "https://airigs.net"
 DEFAULT_RECIPES_URL = "https://recipes.airigs.net"
 
-#: The OAuth client the CLI authenticates as. AIRigs generates the id when the
-#: administrator registers the client (``aic_...``), so it is deployment-specific
-#: and cannot be a compile-time constant: override it with ``AIRIGS_CLIENT_ID``.
+#: The CLI authenticates as the fixed public device-flow client ``airigs-cli``,
+#: registered once on the deployment. ``AIRIGS_CLIENT_ID`` is an escape hatch
+#: for a non-standard deployment that uses a different id.
 CLIENT_ID = os.environ.get("AIRIGS_CLIENT_ID") or "airigs-cli"
 SCOPE = "user:read rig:read rig:write recipe:read recipe:write"
 

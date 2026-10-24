@@ -110,12 +110,11 @@ never as an argument, because argv is visible in `ps` and shell history:
 printf '%s' "$AIRIGS_TOKEN" | airigs login --token -
 ```
 
-No environment override is needed for a standard deployment: the CLI authenticates as the public
-client id `airigs-cli` and requests
-`user:read rig:read rig:write recipe:read recipe:write`. The AIRigs administrator must have
-registered that exact client (public, device flow, loopback redirect
-`http://127.0.0.1:8765/callback`). If your instance deliberately registers a different id, set
-`AIRIGS_CLIENT_ID` for the CLI process.
+No environment override is needed: the CLI authenticates as the fixed public device-flow client
+`airigs-cli` (public, device flow, loopback redirect `http://127.0.0.1:8765/callback`) and
+requests `user:read rig:read rig:write recipe:read recipe:write`. That client is registered on
+the public deployment. `AIRIGS_CLIENT_ID` is only an escape hatch for a non-standard deployment
+that deliberately registers a different id.
 
 Check the session at any time with:
 
@@ -235,9 +234,9 @@ can change its password/revoke sessions in AIRigs.
 different `AIRIGS_URL`. Log in once against the new origin; reusing a token across origins is
 refused by design.
 
-**Login fails with `invalid_client`.** The instance has no client with id `airigs-cli`. Ask the
-administrator to register a public client with device flow enabled, or set `AIRIGS_CLIENT_ID`
-to the id they registered.
+**Login fails with `invalid_client`.** The instance has no client with id `airigs-cli`. The public
+deployment already has it; on a self-hosted instance ask the administrator to register a public
+client with device flow enabled, or set `AIRIGS_CLIENT_ID` to the id they registered.
 
 **`airigs doctor` says config mode is wrong.** `chmod 600 "$XDG_CONFIG_HOME/airigs/config.json"`
 and `chmod 700 "$XDG_CONFIG_HOME/airigs"`.
